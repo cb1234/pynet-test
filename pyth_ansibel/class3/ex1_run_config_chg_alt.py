@@ -3,18 +3,22 @@
 Using SNMPv3 create a script that detects router configuration changes.
 If the running configuration has changed, then send an email notification to
 yourself identifying the router that changed and the time that it changed.
-In this exercise, you will possibly need to save data to an external file. One
-way you can accomplish this is by using a pickle file.
+In this exercise, you will possibly need to save data to an external file. Use
+either JSON or YAML to save the data to an external file.
 '''
 
-import cPickle as pickle
 import os.path
+from datetime import datetime
 from getpass import getpass
+
+import cPickle as pickle
+import yaml
+import json
+
+from collections import namedtuple
 
 from snmp_helper import snmp_get_oid_v3, snmp_extract
 from email_helper import send_mail
-
-from datetime import datetime
 
 
 # Constants
@@ -30,72 +34,98 @@ RUN_LAST_CHANGED = '1.3.6.1.4.1.9.9.43.1.1.1.0'
 SYS_NAME = '1.3.6.1.2.1.1.5.0'
 SYS_UPTIME = '1.3.6.1.2.1.1.3.0'
 
+# Create namedtuple for network devices
+NetworkDevice = namedtuple("NetworkDevice", "uptime last_changed run_config_changed")
 
 
 def obtain_saved_objects(file_name):
     '''
-    Read in previously saved objects from a pickle file
-    Returns a dict:
-    {
-      'device_name': device_object,
-      'device_name': device_object,
-    }
+    Read in previously saved objects from a file
+    Determine from the file_name whether .pkl, .yml, or .json, properly retrieve the data from
+    the file.
+    Return the retrieved network devices
     '''
 
-    # Check that the pickle file exists
+    net_devices = {}
+
+    # Check that the file exists
     if not  os.path.isfile(file_name):
         return {}
 
-    # Read in any saved network devices
-    net_devices = {}
-    with open(file_name, 'r') as f:
-        while True:
-            try:
-                tmp_device = pickle.load(f)
-                #net_devices = tmp_device
-                net_devices[tmp_device.device_name] = tmp_device
-            except EOFError:
-                break
+    # Determine whether .pkl, .yml, or .json file
+    if file_name.count(".") == 1:
+        _, out_format = file_name.split(".")
+    else:
+        raise ValueError("Invalid file name: {0}".format(file_name))
+
+    if out_format == 'pkl':
+        with open(file_name, 'r') as f:
+            while True:
+                try:
+                    net_devices = pickle.load(f)
+                except EOFError:
+                    break
+    elif out_format == 'yml':
+        with open(file_name, 'r') as f:
+            net_devices = yaml.load(f)
+    
+    elif out_format == 'json':
+        with open(file_name, 'r') as f:
+            net_devices = json.load(f)
+            print net_devices
+            # JSON returns straight tuple, convert to namedtuple
+            for device_name, device_attrs in net_devices.items():
+                uptime, last_changed, run_config_changed = device_attrs
+                tmp_device = NetworkDevice(uptime, last_changed, run_config_changed)
+                net_devices[device_name] = tmp_device
+            print net_devices
+    else:
+        raise ValueError("Invalid file name: {0}".format(file_name))
 
     return net_devices
 
 
-def send_notification(net_device):
+def save_objects_to_file(file_name, data_dict):
+    '''
+    Write the network devices out to a file
+    '''
+
+    # Determine whether .pkl, .yml, or .json file
+    if file_name.count(".") == 1:
+        _, out_format = file_name.split(".")
+    else:
+        raise ValueError("Invalid file name: {0}".format(file_name))
+
+    if out_format == 'pkl':
+        with open(file_name, 'w') as f:
+            pickle.dump(data_dict, f)
+    elif out_format == 'yml':
+        with open(file_name, 'w') as f:
+            f.write(yaml.dump(data_dict, default_flow_style=False))
+    elif out_format == 'json':
+        with open(file_name, 'w') as f:
+            json.dump(data_dict, f)
+
+
+def send_notification(device_name):
     '''
     Send email notification regarding modified device
     '''
 
     current_time = datetime.now()
 
-    sender = 'chula_bandara@hotmail.com'
+    sender = 'sender@twb-tech.com'
     recipient = 'chula_bandara@hotmail.com'
-    subject = 'Device {0} was modified'.format(net_device.device_name)
+    subject = 'Device {0} was modified'.format(device_name)
 
     message = '''
 The running configuration of {0} was modified.  
 This change was detected at: {1}
-'''.format(net_device.device_name, current_time)
+'''.format(device_name, current_time)
 
     if send_mail(recipient, subject, message, sender):
         print 'Email notification sent to {}'.format(recipient)
         return True
-
-
-class NetworkDevice(object):
-    '''
-    Simple object to store network device information
-    For an alternate solution, you could replace the class/objects with
-    a data structure that uses dictionaries.
-    '''
-
-    def __init__(self, device_name, uptime, last_changed, config_changed=False):
-        self.device_name = device_name
-        self.uptime = uptime
-
-        # The uptime value in hundredths of seconds when running configuration
-        # was last changed
-        self.last_changed = last_changed
-        self.run_config_changed = config_changed
 
 
 def main():
@@ -117,12 +147,14 @@ def main():
             If RUN_LAST_CHANGED is > RELOAD_WINDOW assume running-config was changed
     '''
 
-    # Pickle file for storing previous RunningLastChanged timestamp
-    net_dev_file = 'netdev.pkl'
+    # File for storing previous RunningLastChanged timestamp
+    #net_dev_file = 'netdev.pkl'     # can be .pkl, .yml, or .json
+    #net_dev_file = 'netdev.yml'     # can be .pkl, .yml, or .json
+    net_dev_file = 'netdev.json'     # can be .pkl, .yml, or .json
 
     # SNMPv3 Connection Parameters
-   # ip_addr = raw_input("Enter router IP: ")
     ip_addr = '50.76.53.27'
+    #ip_addr = raw_input("Enter router IP: ")
     a_user = 'pysnmp'
     #my_key = getpass(prompt="Auth + Encryption Key: ")
     my_key = 'galileo1'
@@ -131,7 +163,6 @@ def main():
     snmp_user = (a_user, auth_key, encrypt_key)
     pynet_rtr1 = (ip_addr, 7961)
     pynet_rtr2 = (ip_addr, 8061)
-
 
     print '\n*** Checking for device changes ***'
 
@@ -166,26 +197,24 @@ def main():
 
                 if last_changed <= RELOAD_WINDOW:
                     print "DEVICE RELOADED...not changed"
-                    current_devices[device_name] = NetworkDevice(device_name, uptime,
-                                                                 last_changed, False)
+                    current_devices[device_name] = NetworkDevice(uptime, last_changed, False)
+
                 else:
                     print "DEVICE RELOADED...and changed"
-                    current_devices[device_name] = NetworkDevice(device_name, uptime,
-                                                                 last_changed, True)
-                    send_notification(current_devices[device_name])
+                    current_devices[device_name] = NetworkDevice(uptime, last_changed, True)
+
+                    send_notification(device_name)
 
             # running-config last_changed is the same
             elif last_changed == saved_device.last_changed:
                 print "not changed"
-                current_devices[device_name] = NetworkDevice(device_name, uptime,
-                                                             last_changed, False)
+                current_devices[device_name] = NetworkDevice(uptime, last_changed, False)
 
             # running-config was modified
             elif last_changed > saved_device.last_changed:
                 print "CHANGED"
-                current_devices[device_name] = NetworkDevice(device_name, uptime,
-                                                             last_changed, True)
-                send_notification(current_devices[device_name])
+                current_devices[device_name] = NetworkDevice(uptime, last_changed, True)
+                send_notification(device_name)
 
             else:
                 raise ValueError()
@@ -194,13 +223,10 @@ def main():
             # New device, just save it
             print "{0} {1}".format(device_name, (35 - len(device_name))*'.'),
             print "saving new device"
-            current_devices[device_name] = NetworkDevice(device_name, uptime, last_changed, False)
+            current_devices[device_name] = NetworkDevice(uptime, last_changed, False)
 
 
-    # Write the devices to pickle file
-    with open(net_dev_file, 'w') as f:
-        for dev_obj in current_devices.values():
-            pickle.dump(dev_obj, f)
+    save_objects_to_file(net_dev_file, current_devices)
 
     print
 
