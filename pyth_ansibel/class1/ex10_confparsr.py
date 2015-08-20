@@ -14,7 +14,7 @@ def main():
     the transform set name). Print these entries and their corresponding
     transform set name.
     '''
-    cisco_file = 'cisco.txt'
+    cisco_file = 'cisco_ipsec.txt'
 
     cisco_cfg = CiscoConfParse(cisco_file)
     crypto_maps = cisco_cfg.find_objects_wo_child(parentspec=r'crypto map CRYPTO',

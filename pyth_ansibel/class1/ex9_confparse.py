@@ -10,7 +10,7 @@ def main():
     Use the ciscoconfparse library to find the crypto maps that are using pfs
     group2
     '''
-    cisco_file = 'cisco.txt'
+    cisco_file = 'cisco_ipsec.txt'
 
     cisco_cfg = CiscoConfParse(cisco_file)
     crypto_maps = cisco_cfg.find_objects_w_child(parentspec=r'crypto map CRYPTO',
