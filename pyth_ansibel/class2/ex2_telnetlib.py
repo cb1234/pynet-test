@@ -54,10 +54,12 @@ def main():
     Write a script that connects to the lab pynet-rtr1, logins, and executes the
     'show ip int brief' command.
     '''
-    ip_addr = raw_input("IP address: ")
+    #ip_addr = raw_input("IP address: ")
+    ip_addr = '50.76.53.27' 
     ip_addr = ip_addr.strip()
     username = 'pyclass'
-    password = getpass.getpass()
+    #password = getpass.getpass()
+    password = '88newclass'
 
     remote_conn = telnet_connect(ip_addr)
     output = login(remote_conn, username, password)
