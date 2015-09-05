@@ -1,0 +1,39 @@
+{% extends "base.j2"%}
+
+{% block interfaces %}
+{% for interface in cisco_881_l2_interfaces %}
+interface {{interface}}
+ switchport access vlan 10
+ spanning-tree portfast
+ !
+!
+{% endfor %}
+interface FastEthernet4
+ ip address {{item.public_ip}} {{item.public_netmask}}
+ ip access-group INTERNET in
+ no ip redirects
+ no ip proxy-arp
+ ip nat outside
+{% if item.CBAC %} ip inspect INTERNET out
+{% endif %}
+ ip virtual-reassembly
+ duplex auto
+ speed auto
+ no cdp enable
+ !
+!
+interface Vlan1
+ no ip address
+ !
+!
+interface Vlan10
+ description Internal LAN
+ ip address {{item.internal_ip}} 255.255.255.0
+ ip nat inside
+ ip virtual-reassembly
+ !
+{% endblock %}
+
+{% block nat %}
+ip nat inside source list NAT interface FastEthernet4 overload
+{% endblock %}

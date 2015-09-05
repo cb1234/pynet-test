@@ -1,0 +1,33 @@
+{% extends "base.j2" %}
+
+{% block interfaces %}
+!
+interface GigabitEthernet0/0
+ ip address {{item.public_ip}} {{item.public_netmask}}
+ ip access-group INTERNET in
+ no ip redirects
+ no ip proxy-arp
+ ip nat outside
+{% if item.CBAC %} ip inspect INTERNET out
+{% endif %}
+ ip virtual-reassembly
+ duplex auto
+ speed auto
+ no cdp enable
+ !
+!
+interface GigabitEthernet0/1
+ description Internal LAN
+ ip address {{item.internal_ip}} 255.255.255.0
+ no ip redirects
+ no ip proxy-arp
+ ip nat inside
+ ip virtual-reassembly
+ duplex auto
+ speed auto
+!
+{% endblock %}
+
+{% block nat %}
+ip nat inside source list NAT interface GigabitEthernet0/0 overload    
+{% endblock %}

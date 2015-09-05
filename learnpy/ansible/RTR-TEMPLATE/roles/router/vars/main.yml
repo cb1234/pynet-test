@@ -1,0 +1,13 @@
+---
+routers_881:
+   - { hostname: twb-sf-rtr1, secret: apassword, timezone: PST, timezone_dst: PDT, timezone_offset: -8, DHCP: true, dhcp_exclude1_start: 10.1.1.1, dhcp_exclude1_end: 10.1.1.99, dhcp_network: 10.1.1.0, dhcp_netmask: 255.255.255.0, dhcp_gateway: 10.1.1.1, CBAC: true, public_ip: 6.6.6.6, public_netmask: 255.255.255.0, public_gateway: 6.6.6.1, internal_ip: 10.1.1.1, internal_network: 10.1.1.0 }
+
+cisco_881_l2_interfaces:
+  - FastEthernet0
+  - FastEthernet1
+  - FastEthernet2
+  - FastEthernet3
+
+
+routers_1921:
+   - { hostname: twb-sf-rtr2, secret: apassword, timezone: PST, timezone_dst: PDT, timezone_offset: -8, DHCP: true, dhcp_exclude1_start: 10.1.1.1, dhcp_exclude1_end: 10.1.1.99, dhcp_network: 10.1.1.0, dhcp_netmask: 255.255.255.0, dhcp_gateway: 10.1.1.1, CBAC: true, public_ip: 6.6.6.6, public_netmask: 255.255.255.0, public_gateway: 6.6.6.1, internal_ip: 10.1.1.1, internal_network: 10.1.1.0 }

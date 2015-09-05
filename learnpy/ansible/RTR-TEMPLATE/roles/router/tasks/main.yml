@@ -1,0 +1,8 @@
+---
+- name: Generate configuration files
+  template: src=router-881.j2 dest=/home/cbandara/ANSIBLE/CFGS/{{item.hostname}}.txt
+  with_items: routers_881
+
+- name: Generate configuration files
+  template: src=router-1921.j2 dest=/home/cbandara/ANSIBLE/CFGS/{{item.hostname}}.txt
+  with_items: routers_1921
